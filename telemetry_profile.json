@@ -1,0 +1,23 @@
+[
+  {
+    "step": 1,
+    "timestamp": 100.1,
+    "altitude_ft": 120000,
+    "aerodynamic_drag_lbs": 11240.0,
+    "dissociation_rate": 0.00
+  },
+  {
+    "step": 2,
+    "timestamp": 100.2,
+    "altitude_ft": 95000,
+    "aerodynamic_drag_lbs": 38210.0,
+    "dissociation_rate": 0.02
+  },
+  {
+    "step": 3,
+    "timestamp": 100.3,
+    "altitude_ft": 70000,
+    "aerodynamic_drag_lbs": 56200.0,
+    "dissociation_rate": 0.07
+  }
+]
