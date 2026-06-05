@@ -39,7 +39,7 @@ While the current ingestion layer processes flat, parsed legacy files, the modul
 * `test_engine.py` - The automated unit-testing and QA validation suite verifying the pipeline logic.
 * `README.md` - Technical framework summary, architectural breakdown, and verification overview.
 * `multidisciplinary_system.py` - Coordinates structural load safety margins, electrical power budgets, mechanical actuation pressures, real-time software constraints, and factory manufacturing tolerances.
-
+* `signal_processor.py` - Digital signal filter processing suite utilizing moving-average window logic to smooth high-frequency aerothermal sensor data stream noise.
 
 ### 3. Machine Learning Predictor Hooks
 The deterministic logic gates can be seamlessly supplemented with predictive analytics. By feeding the real-time value properties into a lightweight machine learning inference loop, the state machine can transition based on *predicted* structural failures or boundary breaches before they physically manifest in the telemetry stream.
