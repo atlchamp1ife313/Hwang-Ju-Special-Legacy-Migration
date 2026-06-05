@@ -1,0 +1,6 @@
+# LGM-35A Sentinel Alignment Framework Requirements
+# This framework relies exclusively on the Python Standard Library (3.8+)
+# No external third-party dependencies are required to execute the simulation or test suite.
+
+unittest
+json
