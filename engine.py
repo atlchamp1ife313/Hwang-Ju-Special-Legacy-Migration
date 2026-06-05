@@ -1,28 +1,39 @@
 """
 Model-Based Systems Engineering (MBSE) Simulation Engine
 Authoritative Source of System Truth via Architecture-as-Code
+Specialized for Aerothermal TPS Design Parameters
 """
 
 import json
 
 class SysMLBlock:
-    """Represents a structural SysML Block (Block Definition Diagram blueprint)[cite: 16, 104]."""
+    """Represents a structural SysML Block (Block Definition Diagram blueprint)."""
     def __init__(self, name: str):
         self.name = name
-        self.value_properties = {} # Holds physical value properties [cite: 107]
-        self.requirements = []     # Holds attached system/client requirements [cite: 212]
+        self.value_properties = {} # Holds physical value properties
+        self.requirements = []     # Holds attached system/client requirements
 
     def set_property(self, prop_name: str, value: float):
-        """Parametric Interface: Sets or updates a physical Value Property[cite: 23, 108]."""
+        """Parametric Interface: Sets or updates a physical Value Property."""
         self.value_properties[prop_name] = value
 
     def attach_requirement(self, req_id: str, text: str):
-        """Attaches system architectural requirements directly to the block[cite: 215, 239]."""
-        self.requirements.append({"id": req_id, "text": text, "status": "UNVERIFIED"}) [cite: 216]
+        """Attaches system architectural requirements directly to the block."""
+        self.requirements.append({"id": req_id, "text": text, "status": "UNVERIFIED"})
+
+
+class TPSBlock(SysMLBlock):
+    """Specialized Block representing the Thermal Protection System layer."""
+    def __init__(self, material_name: str, thickness_mm: float):
+        super().__init__(f"TPS Layer ({material_name})")
+        self.set_property("thickness_mm", thickness_mm)
+        self.set_property("peak_heat_flux_mw", 0.0)      # Megawatts per square meter
+        self.set_property("surface_temp_k", 300.0)       # Surface temperature in Kelvin
+        self.set_property("ablation_mass_loss_kg", 0.0)  # Simulated material loss
 
 
 class Signal:
-    """Represents an Inter-Element Signal Packet for behavioral coordination[cite: 47, 110]."""
+    """Represents an Inter-Element Signal Packet for behavioral coordination."""
     def __init__(self, name: str):
         self.name = name
 
@@ -40,125 +51,135 @@ class LegacyDataImporter:
             
             parsed_data = []
             for entry in profile_data:
-                # Unit Conversion: Pounds-force to Newtons (1 lb = 4.44822 N)
                 drag_lb = entry["aerodynamic_drag_lbs"]
                 drag_n = drag_lb * 4.44822
                 
+                # Dynamic calculated approximation for aerothermal heat flux based on velocity profiles
+                # Higher deceleration/drag correlates heavily to a spike in stagnation heat flux
+                simulated_heat_flux = (drag_n / 100000.0) * 1.5 
+                
                 parsed_data.append({
                     "drag": drag_n, 
-                    "dissociation": entry["dissociation_rate"]
+                    "dissociation": entry["dissociation_rate"],
+                    "heat_flux": simulated_heat_flux
                 })
             return parsed_data
         except FileNotFoundError:
-            # Fallback mock data if executed outside the repository root directory
             return [
-                {"drag": 49998.0, "dissociation": 0.0},
-                {"drag": 169966.4, "dissociation": 0.02},
-                {"drag": 249989.9, "dissociation": 0.07}
+                {"drag": 49998.0, "dissociation": 0.0, "heat_flux": 0.5},
+                {"drag": 169966.4, "dissociation": 0.02, "heat_flux": 2.5},
+                {"drag": 249989.9, "dissociation": 0.07, "heat_flux": 3.7}
             ]
 
 
 class StateMachine:
-    """Executes behavioral state transitions, actions, and automated verification[cite: 113, 226]."""
-    def __init__(self, block_context: SysMLBlock):
-        self.context = block_context # The block this state machine governs [cite: 117]
-        self.current_state = "EXOATMOSPHERIC_COAST" [cite: 118]
-        self.transitions = [] [cite: 119]
+    """Executes behavioral state transitions, actions, and automated verification."""
+    def __init__(self, block_context: SysMLBlock, tps_context: TPSBlock):
+        self.context = block_context 
+        self.tps = tps_context
+        self.current_state = "EXOATMOSPHERIC_COAST"
+        self.transitions = []
 
     def add_transition(self, from_state: str, to_state: str, condition_func, signal_to_send: Signal, target_subsystem: SysMLBlock):
-        """Defines a deterministic behavioral transition pathway (tripwire gate)[cite: 120, 121]."""
-        self.transitions.append({ [cite: 122]
-            "from": from_state, [cite: 123]
-            "to": to_state, [cite: 125]
-            "condition": condition_func, [cite: 126]
-            "signal": signal_to_send, [cite: 127]
-            "target": target_subsystem [cite: 128]
+        self.transitions.append({
+            "from": from_state,
+            "to": to_state,
+            "condition": condition_func,
+            "signal": signal_to_send,
+            "target": target_subsystem
         })
 
     def update(self):
-        """Active listener loop checking if state boundary criteria are satisfied[cite: 129, 130]."""
-        for t in self.transitions: [cite: 131]
-            if t["from"] == self.current_state: [cite: 132]
-                # Evaluate the Opaque Expression lambda function against current Value Properties [cite: 114, 134]
-                if t["condition"](self.context.value_properties): [cite: 134]
-                    print(f"\n[CRITICAL EVENT]: State changing from {self.current_state} -> {t['to']}") [cite: 135]
-                    self.current_state = t["to"] [cite: 135]
-                    
-                    # Execute Behavioral Action: Send Signal down the Information Flow Interface [cite: 136, 137]
-                    self.fire_signal(t["signal"], t["target"]) [cite: 137]
-                    
-                    # V-Model Verification Gate: Programmatically evaluate system requirements [cite: 206, 227]
+        """Active listener loop checking physical and aerothermal parameters."""
+        # Calculate simulated TPS thermal response based on the current heat flux property
+        q_dot = self.tps.value_properties["peak_heat_flux_mw"]
+        if q_dot > 0:
+            # Radiation equilibrium simulation: surface temp rises deterministically with heat flux
+            calculated_temp = 300.0 + (q_dot * 450.0)
+            self.tps.set_property("surface_temp_k", calculated_temp)
+            
+            # If temp exceeds ablation threshold, calculate structural mass loss
+            if calculated_temp > 1200.0:
+                loss = (calculated_temp - 1200.0) * 0.005
+                self.tps.set_property("ablation_mass_loss_kg", loss)
+
+        for t in self.transitions:
+            if t["from"] == self.current_state:
+                if t["condition"](self.context.value_properties, self.tps.value_properties):
+                    print(f"\n[CRITICAL EVENT]: State changing from {self.current_state} -> {t['to']}")
+                    self.current_state = t["to"]
+                    self.fire_signal(t["signal"], t["target"])
                     self.verify_requirements()
 
     def fire_signal(self, signal: Signal, target_subsystem: SysMLBlock):
-        print(f"[SIGNAL ACTION]: Firing '{signal.name}' down port interface to {target_subsystem.name}.") [cite: 139, 227]
-        target_subsystem.receive_signal(signal) [cite: 140, 227]
+        print(f"[SIGNAL ACTION]: Firing '{signal.name}' down port interface to {target_subsystem.name}.")
+        target_subsystem.receive_signal(signal)
 
     def verify_requirements(self):
-        """Automated Verification: Closes the V-Model Loop systematically[cite: 206, 227]."""
-        for req in self.context.requirements: [cite: 228]
-            if req["id"] == "REQ-001" and self.current_state == "HYPERSONIC_REENTRY": [cite: 228]
-                req["status"] = "VERIFIED / PASSED" [cite: 228]
-                print(f"[REQUIREMENT VERIFIED]: {req['id']} ('{req['text']}') status updated to {req['status']}.") [cite: 228]
+        for req in self.context.requirements:
+            if req["id"] == "REQ-001" and self.current_state == "HYPERSONIC_REENTRY":
+                req["status"] = "VERIFIED / PASSED"
+                print(f"[REQUIREMENT VERIFIED]: {req['id']} ('{req['text']}') status updated to {req['status']}.")
+        
+        for req in self.tps.requirements:
+            if req["id"] == "REQ-002" and self.tps.value_properties["surface_temp_k"] < 2500.0:
+                req["status"] = "VERIFIED / PASSED"
+                print(f"[REQUIREMENT VERIFIED]: {req['id']} ('{req['text']}') status updated to {req['status']}.")
 
-
-# --- SUBSYSTEM HARDWARE DEFINITIONS (IBD LAYOUT) --- [cite: 141]
 
 class ReentryVehicle(SysMLBlock):
     def __init__(self):
-        super().__init__("Payload Re-entry Vehicle") [cite: 145]
-        self.set_property("aerodynamic_drag", 0.0)      # Unit: Newtons [cite: 146, 148]
-        self.set_property("dissociation_rate", 0.0)     # Unit: mol/(m^3 * s) [cite: 147, 149]
+        super().__init__("Payload Re-entry Vehicle")
+        self.set_property("aerodynamic_drag", 0.0)      
+        self.set_property("dissociation_rate", 0.0)     
 
 
 class GuidanceSystem(SysMLBlock):
     def __init__(self):
-        super().__init__("GN&C Subsystem") [cite: 152, 229]
-        self.status = "DORMANT" [cite: 153, 229]
+        super().__init__("GN&C Subsystem")
+        self.status = "DORMANT"
 
     def receive_signal(self, signal: Signal):
-        if signal.name == "Initialize Guidance": [cite: 155]
-            self.status = "ACTIVE_TRACKING" [cite: 156]
-            print(f"[SUBSYSTEM UPDATE]: {self.name} is now {self.status}. Locking onto target coordinates.") [cite: 157]
+        if signal.name == "Initialize Guidance":
+            self.status = "ACTIVE_TRACKING"
+            print(f"[SUBSYSTEM UPDATE]: {self.name} is now {self.status}. Locking onto target coordinates.")
 
 
-# --- SIMULATION EXECUTION PIPELINE --- [cite: 158]
 if __name__ == "__main__":
-    # 1. Instantiate structural hardware components [cite: 160]
-    rv = ReentryVehicle() [cite: 160]
-    gnc = GuidanceSystem() [cite: 161]
+    rv = ReentryVehicle()
+    gnc = GuidanceSystem()
+    
+    # Instantiate PICA material tile subsystem with 50mm structural thickness
+    tps = TPSBlock(material_name="PICA-X", thickness_mm=50.0)
 
-    # 2. Attach authoritative architectural requirement (Tracing & Verification) [cite: 215, 239]
     rv.attach_requirement("REQ-001", "GN&C system must initialize autonomously within 1ms of atmospheric capture.")
+    tps.attach_requirement("REQ-002", "TPS structural bondline temperature must remain below survivability limit (2500 K).")
 
-    # 3. Establish Behavioral State Machine & Triggers [cite: 162]
-    rv_state_machine = StateMachine(block_context=rv) [cite: 162]
-    init_signal = Signal("Initialize Guidance") [cite: 163]
+    rv_state_machine = StateMachine(block_context=rv, tps_context=tps)
+    init_signal = Signal("Initialize Guidance")
 
-    # Bind physics logic gate via an Opaque Expression lambda function [cite: 114, 159, 164]
-    rv_state_machine.add_transition( [cite: 164]
-        from_state="EXOATMOSPHERIC_COAST", [cite: 165]
-        to_state="HYPERSONIC_REENTRY", [cite: 165]
-        condition=lambda props: props["aerodynamic_drag"] > 50000 and props["dissociation_rate"] > 0.05, [cite: 166, 167]
-        signal_to_send=init_signal, [cite: 168]
-        target_subsystem=gnc [cite: 169]
+    # Expanded trigger condition that maps both structural aerodynamic parameters and aerothermal heat flux boundaries
+    rv_state_machine.add_transition(
+        from_state="EXOATMOSPHERIC_COAST",
+        to_state="HYPERSONIC_REENTRY",
+        condition=lambda structural, thermal: structural["aerodynamic_drag"] > 50000 and thermal["peak_heat_flux_mw"] > 1.0,
+        signal_to_send=init_signal,
+        target_subsystem=gnc
     )
 
-    # 4. Ingest telemetry from the Legacy Data Adapter [cite: 230]
     print("Initializing Legacy Telemetry Stream Ingestion...")
-    legacy_flight_profiles = LegacyDataImporter.parse_legacy_telemetry() [cite: 230]
+    legacy_flight_profiles = LegacyDataImporter.parse_legacy_telemetry()
 
-    # 5. Live Simulation Loop (Parametric Data Stream Execution) [cite: 230]
-    for idx, telemetry in enumerate(legacy_flight_profiles): [cite: 230]
-        print(f"\n--- Processing Profile Step {idx+1} ---") [cite: 230]
+    for idx, telemetry in enumerate(legacy_flight_profiles):
+        print(f"\n--- Processing Profile Step {idx+1} ---")
         
-        # Stream physics variables into the system block context in real-time [cite: 179, 230]
-        rv.set_property("aerodynamic_drag", telemetry["drag"]) [cite: 180, 230]
-        rv.set_property("dissociation_rate", telemetry["dissociation"]) [cite: 181, 230]
+        rv.set_property("aerodynamic_drag", telemetry["drag"])
+        rv.set_property("dissociation_rate", telemetry["dissociation"])
+        tps.set_property("peak_heat_flux_mw", telemetry["heat_flux"])
 
-        print(f"Ingested Drag: {rv.value_properties['aerodynamic_drag']:.2f} N") [cite: 182, 230]
-        print(f"Ingested Dissociation Rate: {rv.value_properties['dissociation_rate']:.4f} mol/m3/s") [cite: 230]
-        print(f"Guidance Status: {gnc.status}") [cite: 184, 230]
+        print(f"Ingested Drag: {rv.value_properties['aerodynamic_drag']:.2f} N")
+        print(f"Ingested Heat Flux: {tps.value_properties['peak_heat_flux_mw']:.2f} MW/m2")
+        print(f"Calculated Surface Temp: {tps.value_properties['surface_temp_k']:.2f} K")
+        print(f"Ablative Mass Loss: {tps.value_properties['ablation_mass_loss_kg']:.4f} kg")
 
-        # Engine listener updates states & checks constraints deterministically [cite: 185, 231]
-        rv_state_machine.update() [cite: 185]
+        rv_state_machine.update()
