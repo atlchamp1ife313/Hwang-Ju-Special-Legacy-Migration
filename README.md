@@ -35,11 +35,15 @@ While the current ingestion layer processes flat, parsed legacy files, the modul
 
 ## 📂 Repository Structure
 
-* `engine.py` - The executable Python simulation engine, containing block definitions, the state machine listener, legacy data parser, and automated verification logic.
-* `test_engine.py` - The automated unit-testing and QA validation suite verifying the pipeline logic.
-* `README.md` - Technical framework summary, architectural breakdown, and verification overview.
-* `multidisciplinary_system.py` - Coordinates structural load safety margins, electrical power budgets, mechanical actuation pressures, real-time software constraints, and factory manufacturing tolerances.
-* `signal_processor.py` - Digital signal filter processing suite utilizing moving-average window logic to smooth high-frequency aerothermal sensor data stream noise.
+* `.github/workflows/python-app.yml` - Continuous Integration pipeline executing automated verification scripts on every commit.
+* `docs/` - Configuration blueprints for auto-generating Sphinx verification and validation (V&V) technical documentation.
+* `telemetry_profile.json` - Externalized raw static data profile simulating silo telemetry input arrays.
+* `signal_processor.py` - Avionics signal processing layer implementing digital noise filters for sensor telemetry.
+* `engine.py` - Main flight vehicle core simulation engine with SysML block architectures.
+* `multidisciplinary_system.py` - Cross-domain system integration bus managing structural, electrical, and mechanical physics cascades.
+* `electro_optical_mechanical.py` - Electro-optical target tracking subsystem modeling mechanical gimbal actuation and power draw metrics.
+* `test_engine.py` - Comprehensive automated QA test matrix validating all cross-discipline modules simultaneously.
+* `requirements.txt` & `.gitignore` - Project environment hygiene, dependencies, and file tracking exclusions.
 
 ### 3. Machine Learning Predictor Hooks
 The deterministic logic gates can be seamlessly supplemented with predictive analytics. By feeding the real-time value properties into a lightweight machine learning inference loop, the state machine can transition based on *predicted* structural failures or boundary breaches before they physically manifest in the telemetry stream.
