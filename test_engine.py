@@ -50,6 +50,21 @@ class TestMultidisciplinaryCascades(unittest.TestCase):
         # Assertions prove physical parameters updated across disconnected classes seamlessly
         self.assertTrue(mechanical.attributes["hydraulic_pressure_psi"] < 3000.0)
         self.assertTrue(electrical.attributes["current_draw_amps"] > 15.0)
+from signal_processor import MovingAverageFilter
 
+class TestSignalProcessingFilters(unittest.TestCase):
+    def test_moving_average_smoothing(self):
+        """Validates that transient physical noise spikes are effectively dampened by the filter window."""
+        processor = MovingAverageFilter(window_size=3)
+        
+        # Step 1 & 2 establish a steady state baseline
+        processor.filter_signal("DRAG", 100.0)
+        processor.filter_signal("DRAG", 100.0)
+        
+        # Step 3 introduces an extreme momentary noise anomaly (e.g., sensor static)
+        filtered_val = processor.filter_signal("DRAG", 400.0)
+        
+        # The mean of [100, 100, 400] is 200. The spike is effectively cut in half!
+        self.assertEqual(filtered_val, 200.0)
 if __name__ == "__main__":
     unittest.main()
