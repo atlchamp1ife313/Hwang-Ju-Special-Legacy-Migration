@@ -1,132 +1,145 @@
 """
-LGM-35A Sentinel Program - Multidisciplinary Systems Engineering (MSE) Framework
-Coordinates Structural, Electrical, Manufacturing, Mechanical, and Software Domains.
+LGM-35A Sentinel Program - Advanced Multidisciplinary Systems Engineering (MSE) Framework
+Implements Dynamic Interface Control Document (ICD) Cascading Dependencies.
 """
 
-import json
+class SystemInterfaceBus:
+    """Centralized System Bus representing physical and logical interfaces between domains (ICD)."""
+    def __init__(self):
+        self.registry = {}
+
+    def register_domain(self, name: str, block):
+        self.registry[name] = block
+
+    def propagate_change(self, source_domain: str, parameter: str, value: float):
+        """Dynamic Change Propagation Matrix mapping cross-discipline physics coupling."""
+        # 1. Software to Mechanical Coupling
+        if source_domain == "Software" and parameter == "commanded_tvc_gimbal_deg":
+            mechanical = self.registry.get("Mechanical")
+            if mechanical:
+                # Moving mechanical parts increases hydraulic demand
+                new_pressure = 3000.0 - (abs(value) * 25.0)
+                mechanical.update_parameter("hydraulic_pressure_psi", new_pressure)
+                
+                # 2. Mechanical to Electrical Coupling (Cascade)
+                electrical = self.registry.get("Electrical")
+                if electrical:
+                    # Hydraulic valves demanding more power spikes the avionics bus current draw
+                    new_current = 15.0 + (abs(value) * 4.5)
+                    electrical.update_parameter("current_draw_amps", new_current)
+
+        # 3. Structural to Mechanical Coupling
+        if source_domain == "Structural" and parameter == "current_aerodynamic_load_n":
+            mechanical = self.registry.get("Mechanical")
+            if mechanical and value > 200000.0:
+                # Extreme structural wind sheer forcing active adjustments degrades hydraulic pressure reserves
+                current_press = mechanical.attributes.get("hydraulic_pressure_psi", 3000.0)
+                mechanical.update_parameter("hydraulic_pressure_psi", current_press - 150.0)
+
 
 class EngineeringDomainBlock:
     """Base class representing a specialized engineering discipline domain."""
-    def __init__(self, domain_name: str):
+    def __init__(self, domain_name: str, bus: SystemInterfaceBus):
         self.domain_name = domain_name
+        self.bus = bus
         self.attributes = {}
         self.verification_status = "UNVERIFIED"
+        self.bus.register_domain(domain_name, self)
 
-    def update_parameter(self, key: str, value: float):
+    def update_parameter(self, key: str, value: float, broadcast=False):
         self.attributes[key] = value
+        if broadcast:
+            self.bus.propagate_change(self.domain_name, key, value)
 
 
-# 1. STRUCTURAL DOMAIN
+# --- INDIVIDUAL SUB-DOMAINS ---
+
 class StructuralBlock(EngineeringDomainBlock):
-    def __init__(self):
-        super().__init__("Structural Mechanics")
-        # Material properties and load tolerances
+    def __init__(self, bus):
+        super().__init__("Structural", bus)
         self.update_parameter("skin_thickness_mm", 12.5)
-        self.update_parameter("max_tensile_stress_mpa", 450.0)
         self.update_parameter("current_aerodynamic_load_n", 0.0)
 
-    def verify_margins(self):
-        # Safety Factor calculation: Margin must remain positive under load
+    def verify(self):
         if self.attributes["current_aerodynamic_load_n"] < 300000.0:
-            self.verification_status = "PASSED (Structural Integrity Secure)"
+            self.verification_status = "PASSED (Structural Load Margin Tolerable)"
         else:
-            self.verification_status = "FAILED (Load Exceeds Ultimate Tensile Margin)"
+            self.verification_status = "FAILED (Structural Stress Deflection Exceeded)"
 
 
-# 2. ELECTRICAL DOMAIN
 class ElectricalBlock(EngineeringDomainBlock):
-    def __init__(self):
-        super().__init__("Electrical & Power Distribution")
-        # Avionics bus power configuration
+    def __init__(self, bus):
+        super().__init__("Electrical", bus)
         self.update_parameter("bus_voltage_v", 28.0)
-        self.update_parameter("battery_capacity_ah", 120.0)
         self.update_parameter("current_draw_amps", 15.0)
 
-    def verify_power_budget(self):
-        # Verify voltage stability and nominal current overhead
+    def verify(self):
+        # High current draw drops bus voltage line (Ohm's Law dependency)
+        if self.attributes["current_draw_amps"] > 40.0:
+            self.update_parameter("bus_voltage_v", 22.5) # Voltage sag
+        
         if 24.0 <= self.attributes["bus_voltage_v"] <= 32.0 and self.attributes["current_draw_amps"] < 50.0:
-            self.verification_status = "PASSED (Avionics Power Stable)"
+            self.verification_status = "PASSED (Avionics Bus Healthy)"
         else:
-            self.verification_status = "FAILED (Voltage Drop / Bus Overcurrent Detected)"
+            self.verification_status = "FAILED (Avionics Voltage Sag / Under-voltage fault)"
 
 
-# 3. MECHANICAL DOMAIN
 class MechanicalBlock(EngineeringDomainBlock):
-    def __init__(self):
-        super().__init__("Mechanical Actuation & Propulsion")
-        # Stage separation and thrust vector control (TVC) hydraulics
-        self.update_parameter("tvc_gimbal_angle_deg", 0.0)
+    def __init__(self, bus):
+        super().__init__("Mechanical", bus)
         self.update_parameter("hydraulic_pressure_psi", 3000.0)
 
-    def verify_actuation(self):
-        # Validate that hydraulic pressure can support thrust vectoring adjustments
+    def verify(self):
         if 2800.0 <= self.attributes["hydraulic_pressure_psi"] <= 3200.0:
-            self.verification_status = "PASSED (Hydraulic Actuators Operational)"
+            self.verification_status = "PASSED (Hydraulic Pressure Bounds Nominal)"
         else:
-            self.verification_status = "FAILED (Hydraulic Pressure Loss)"
+            self.verification_status = "FAILED (Hydraulic Pressure Dropped Below Actuation Margin)"
 
 
-# 4. SOFTWARE DOMAIN
 class SoftwareBlock(EngineeringDomainBlock):
-    def __init__(self):
-        super().__init__("Flight Software & Guidance Computing")
-        # Core software health parameters
+    def __init__(self, bus):
+        super().__init__("Software", bus)
         self.update_parameter("cpu_utilization_pct", 34.5)
-        self.update_parameter("telemetry_packet_loss_pct", 0.0)
+        self.update_parameter("commanded_tvc_gimbal_deg", 0.0)
 
-    def verify_flight_software(self):
-        # Real-time constraints check
-        if self.attributes["cpu_utilization_pct"] < 80.0 and self.attributes["telemetry_packet_loss_pct"] < 0.1:
-            self.verification_status = "PASSED (Real-Time OS Executing Within Deterministic Windows)"
+    def verify(self):
+        if self.attributes["cpu_utilization_pct"] < 80.0:
+            self.verification_status = "PASSED (Real-Time Executive Window Satisfied)"
         else:
-            self.verification_status = "FAILED (CPU Throttle / Memory Boundary Violation)"
+            self.verification_status = "FAILED (CPU Deadline Missed)"
 
 
-# 5. MANUFACTURING DOMAIN
-class ManufacturingBlock(EngineeringDomainBlock):
-    def __init__(self):
-        super().__init__("Manufacturing & Producibility Constraints")
-        # Production quality tolerances and geometric dimensioning
-        self.update_parameter("machining_tolerance_mm", 0.02)
-        self.update_parameter("assembly_yield_target_pct", 98.5)
-
-    def verify_producibility(self):
-        # Ensure tolerances can be reliably sustained by standard factory floor lines
-        if self.attributes["machining_tolerance_mm"] >= 0.01:
-            self.verification_status = "PASSED (Design Optimized for High-Yield Assembly)"
-        else:
-            self.verification_status = "FAILED (Tolerance Too Tight for Scaled Production)"
-
-
-# --- COORDINATED MULTIDISCIPLINARY SIMULATION PIPELINE ---
+# --- EXECUTION ENGINE PIPELINE ---
 if __name__ == "__main__":
-    print("Initializing Multi-Disciplinary System Configuration Layout...")
+    print("Initializing Multi-Disciplinary Interface Control System...")
     
-    # Instantiate all discipline nodes
-    structural = StructuralBlock()
-    electrical = ElectricalBlock()
-    mechanical = MechanicalBlock()
-    software = SoftwareBlock()
-    manufacturing = ManufacturingBlock()
+    # Instantiate the communication bus
+    icd_bus = SystemInterfaceBus()
 
-    # Simulated flight event: High aerodynamic stress phase during acceleration
-    print("\n--- Simulating High-Dynamic Atmospheric Acceleration Step ---")
-    
-    # Inter-domain dependency update: Physical flight forces alter internal parameters
-    structural.update_parameter("current_aerodynamic_load_n", 245000.0)
-    electrical.update_parameter("current_draw_amps", 38.0)  # TVC servos power draw spikes
-    mechanical.update_parameter("tvc_gimbal_angle_deg", 4.2) # Mechanical nozzle pivots
-    software.update_parameter("cpu_utilization_pct", 58.2)   # Software control loop calculates adjustments
+    # Instantiate the system segments linked via the bus
+    structural = StructuralBlock(icd_bus)
+    electrical = ElectricalBlock(icd_bus)
+    mechanical = MechanicalBlock(icd_bus)
+    software = SoftwareBlock(icd_bus)
 
-    # Execute simultaneous verification routines across all engineering fields
-    discipline_cluster = [structural, electrical, mechanical, software, manufacturing]
+    print("\nInitial State Verification:")
+    for b in [structural, electrical, mechanical, software]:
+        b.verify()
+        print(f" -> [{b.domain_name}]: {b.verification_status}")
+
+    print("\n========================================================")
+    print("SCENARIO: Flight Software executes emergency vector adjustment")
+    print("========================================================")
     
-    for block in discipline_cluster:
-        # Run specific validation logic rules
-        if isinstance(block, StructuralBlock): block.verify_margins()
-        elif isinstance(block, ElectricalBlock): block.verify_power_budget()
-        elif isinstance(block, MechanicalBlock): block.verify_actuation()
-        elif isinstance(block, SoftwareBlock): block.verify_flight_software()
-        elif isinstance(block, ManufacturingBlock): block.verify_producibility()
-        
-        print(f"[{block.domain_name.upper()}]: {block.verification_status}")
+    # Software updates an internal parameter and broadcasts via the ICD matrix
+    print("[SOFTWARE ACTION]: Commanding extreme Thrust Vector Control adjustment (+6.5 Degrees)...")
+    software.update_parameter("commanded_tvc_gimbal_deg", 6.5, broadcast=True)
+    
+    # Structural load experiences unexpected high atmospheric shear forces simultaneously
+    print("[STRUCTURAL EVENT]: Ingesting severe aerodynamic atmospheric wavefront stress load...")
+    structural.update_parameter("current_aerodynamic_load_n", 220000.0, broadcast=True)
+
+    print("\nPost-Cascading Dependency Verification Results:")
+    for b in [structural, electrical, mechanical, software]:
+        b.verify()
+        print(f" -> [{b.domain_name}]: {b.verification_status}")
