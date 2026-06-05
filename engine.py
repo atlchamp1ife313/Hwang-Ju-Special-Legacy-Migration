@@ -29,31 +29,33 @@ class Signal:
 
 class LegacyDataImporter:
     """
-    Legacy Data Ingestion Adapter[cite: 206, 220].
-    Parses unstructured legacy text streams and normalizes old telemetry units[cite: 222, 231].
+    Legacy Data Ingestion Adapter.
+    Dynamically loads external flight profiles and normalizes telemetry units.
     """
     @staticmethod
     def parse_legacy_telemetry():
-        # Simulated unstructured text logs from an older system profile [cite: 223, 224]
-        legacy_raw_log = """
-        TIMESTAMP=100.1,ALT=120K,DRAG_LB=11240,DISSOC=0.00
-        TIMESTAMP=100.2,ALT=95K,DRAG_LB=38210,DISSOC=0.02
-        TIMESTAMP=100.3,ALT=70K,DRAG_LB=56200,DISSOC=0.07
-        """
-        parsed_data = []
-        for line in legacy_raw_log.strip().split("\n"):
-            if not line.strip():
-                continue
-            parts = line.strip().split(",") [cite: 225]
+        try:
+            with open("telemetry_profile.json", "r") as file:
+                profile_data = json.load(file)
             
-            # Unit Conversion Step: Pounds-force to Newtons (1 lb = 4.44822 N) [cite: 225]
-            drag_lb = float(parts[2].split("=")[1]) [cite: 225]
-            drag_n = drag_lb * 4.44822 [cite: 225]
-            
-            dissoc = float(parts[3].split("=")[1]) [cite: 225]
-            parsed_data.append({"drag": drag_n, "dissociation": dissoc}) [cite: 226]
-            
-        return parsed_data
+            parsed_data = []
+            for entry in profile_data:
+                # Unit Conversion: Pounds-force to Newtons (1 lb = 4.44822 N)
+                drag_lb = entry["aerodynamic_drag_lbs"]
+                drag_n = drag_lb * 4.44822
+                
+                parsed_data.append({
+                    "drag": drag_n, 
+                    "dissociation": entry["dissociation_rate"]
+                })
+            return parsed_data
+        except FileNotFoundError:
+            # Fallback mock data if executed outside the repository root directory
+            return [
+                {"drag": 49998.0, "dissociation": 0.0},
+                {"drag": 169966.4, "dissociation": 0.02},
+                {"drag": 249989.9, "dissociation": 0.07}
+            ]
 
 
 class StateMachine:
