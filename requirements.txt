@@ -1,6 +1,5 @@
 # LGM-35A Sentinel Alignment Framework Requirements
 # Core Execution & Unit Testing
-unittest
 json
 
 # Automated Documentation Pipeline Dependencies
