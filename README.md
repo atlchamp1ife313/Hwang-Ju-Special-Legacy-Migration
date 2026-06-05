@@ -47,6 +47,7 @@ While the current ingestion layer processes flat, parsed legacy files, the modul
 * `security_gateway.py` - Simulates cyber mission assurance protocols, implementing cryptographic handshakes to protect command interfaces.
 * `comms_link.py` - Models RF signal attenuation link budgets and plasma ionization communications blackout thresholds.
 * `silo_pneumatics.py` - Tracks ground facility mechanical control loops, monitoring nitrogen accumulator pressure readiness bounds.
+* `mission_executive.py` - The top-level System-of-Systems Flight Executive, orchestrating ground safety workflows, cryptographic authorizations, moving-window signal filters, RF link margins, and optical tracking gimbals into an integrated flight timeline simulation.
 
 ### 3. Machine Learning Predictor Hooks
 The deterministic logic gates can be seamlessly supplemented with predictive analytics. By feeding the real-time value properties into a lightweight machine learning inference loop, the state machine can transition based on *predicted* structural failures or boundary breaches before they physically manifest in the telemetry stream.
