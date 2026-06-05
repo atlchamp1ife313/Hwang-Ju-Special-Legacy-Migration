@@ -33,6 +33,8 @@ class TestDigitalEngineeringFramework(unittest.TestCase):
         # 3.0 MW heat flux should push calculated surface temp past the 1200K ablation limit
         self.assertTrue(self.tps.value_properties["surface_temp_k"] > 1200.0)
         self.assertTrue(self.tps.value_properties["ablation_mass_loss_kg"] > 0.0)
+
+
 from multidisciplinary_system import SystemInterfaceBus, StructuralBlock, ElectricalBlock, MechanicalBlock, SoftwareBlock
 
 class TestMultidisciplinaryCascades(unittest.TestCase):
@@ -50,6 +52,8 @@ class TestMultidisciplinaryCascades(unittest.TestCase):
         # Assertions prove physical parameters updated across disconnected classes seamlessly
         self.assertTrue(mechanical.attributes["hydraulic_pressure_psi"] < 3000.0)
         self.assertTrue(electrical.attributes["current_draw_amps"] > 15.0)
+
+
 from signal_processor import MovingAverageFilter
 
 class TestSignalProcessingFilters(unittest.TestCase):
@@ -66,6 +70,8 @@ class TestSignalProcessingFilters(unittest.TestCase):
         
         # The mean of [100, 100, 400] is 200. The spike is effectively cut in half!
         self.assertEqual(filtered_val, 200.0)
+
+
 from electro_optical_mechanical import ElectroOpticalMechanicalSystem
 
 class TestElectroOpticalMechanicalSystem(unittest.TestCase):
@@ -81,6 +87,8 @@ class TestElectroOpticalMechanicalSystem(unittest.TestCase):
         self.assertEqual(eom.current_draw_amps, 12.5)       # Electrical parameter change
         self.assertTrue(eom.motor_temperature_c > 25.0)     # Mechanical parameter change
         self.assertEqual(eom.check_system_health(), "PASSED: Electro-Optical Mechanical payload operational")
+
+
 from security_gateway import SecurityGateway
 from comms_link import CommsLinkTracker
 from silo_pneumatics import SiloPneumaticsController
@@ -110,6 +118,8 @@ class TestExpandedSentinelSubsystems(unittest.TestCase):
         pneumatics.adjust_pressure("VENT_SAFETY")
         self.assertFalse(pneumatics.verify_launch_readiness())
         self.assertEqual(pneumatics.facility_status, "HOLD_REQUIRED")
+
+
 from mission_executive import MissionExecutive
 
 class TestIntegratedMissionExecutive(unittest.TestCase):
@@ -129,5 +139,6 @@ class TestIntegratedMissionExecutive(unittest.TestCase):
         self.assertTrue(exec_system.filter.history["DRAG_SENSE"])
         self.assertTrue(exec_system.tps.value_properties["surface_temp_k"] > 300.0)
 
+# --- THIS BLOCK INVOCATION IS REQUIRED TO RUN ALL CLASSES ABOVE ---
 if __name__ == "__main__":
     unittest.main()
