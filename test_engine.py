@@ -110,6 +110,24 @@ class TestExpandedSentinelSubsystems(unittest.TestCase):
         pneumatics.adjust_pressure("VENT_SAFETY")
         self.assertFalse(pneumatics.verify_launch_readiness())
         self.assertEqual(pneumatics.facility_status, "HOLD_REQUIRED")
+from mission_executive import MissionExecutive
+
+class TestIntegratedMissionExecutive(unittest.TestCase):
+    def test_end_to_end_executive_execution(self):
+        """Verifies that the Mission Executive smoothly transitions from ground checks to flight metrics processing."""
+        exec_system = MissionExecutive()
+        
+        # Test Phase 1 verification loops run and pass flawlessly
+        pre_launch_success = exec_system.run_pre_launch_sequence()
+        self.assertTrue(pre_launch_success)
+        self.assertTrue(exec_system.security.authenticated_session)
+        
+        # Trigger flight simulation step to confirm filter and comms integration
+        exec_system.run_flight_simulation()
+        
+        # Assert that parameters across distinct modules updated during the integrated timeline run
+        self.assertTrue(exec_system.filter.history["DRAG_SENSE"])
+        self.assertTrue(exec_system.tps.value_properties["surface_temp_k"] > 300.0)
 
 if __name__ == "__main__":
     unittest.main()
