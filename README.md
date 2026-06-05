@@ -32,5 +32,12 @@ Because the base `SysMLBlock` class uses a generic parametric mapping system, th
 ### 2. High-Fidelity Physics Engine Bridging
 While the current ingestion layer processes flat, parsed legacy files, the modular design allows developers to hot-swap the data source. By replacing `LegacyDataImporter` with an active API or WebSocket interface, this framework can live-stream active simulation data directly from high-performance computing (HPC) software or thermal-structural solvers (e.g., ANSYS, spatial fluid dynamics arrays).
 
+
+## 📂 Repository Structure
+
+* `engine.py` - The executable Python simulation engine, containing block definitions, the state machine listener, legacy data parser, and automated verification logic.
+* `test_engine.py` - The automated unit-testing and QA validation suite verifying the pipeline logic.
+* `README.md` - Technical framework summary, architectural breakdown, and verification overview.
+
 ### 3. Machine Learning Predictor Hooks
 The deterministic logic gates can be seamlessly supplemented with predictive analytics. By feeding the real-time value properties into a lightweight machine learning inference loop, the state machine can transition based on *predicted* structural failures or boundary breaches before they physically manifest in the telemetry stream.
