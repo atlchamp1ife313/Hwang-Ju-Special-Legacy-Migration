@@ -44,6 +44,9 @@ While the current ingestion layer processes flat, parsed legacy files, the modul
 * `electro_optical_mechanical.py` - Electro-optical target tracking subsystem modeling mechanical gimbal actuation and power draw metrics.
 * `test_engine.py` - Comprehensive automated QA test matrix validating all cross-discipline modules simultaneously.
 * `requirements.txt` & `.gitignore` - Project environment hygiene, dependencies, and file tracking exclusions.
+* `security_gateway.py` - Simulates cyber mission assurance protocols, implementing cryptographic handshakes to protect command interfaces.
+* `comms_link.py` - Models RF signal attenuation link budgets and plasma ionization communications blackout thresholds.
+* `silo_pneumatics.py` - Tracks ground facility mechanical control loops, monitoring nitrogen accumulator pressure readiness bounds.
 
 ### 3. Machine Learning Predictor Hooks
 The deterministic logic gates can be seamlessly supplemented with predictive analytics. By feeding the real-time value properties into a lightweight machine learning inference loop, the state machine can transition based on *predicted* structural failures or boundary breaches before they physically manifest in the telemetry stream.
