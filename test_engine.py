@@ -66,5 +66,22 @@ class TestSignalProcessingFilters(unittest.TestCase):
         
         # The mean of [100, 100, 400] is 200. The spike is effectively cut in half!
         self.assertEqual(filtered_val, 200.0)
+from electro_optical_mechanical import ElectroOpticalMechanicalSystem
+
+class TestElectroOpticalMechanicalSystem(unittest.TestCase):
+    def test_eom_actuation_dynamics(self):
+        """Validates that optical tracking adjustments trigger mechanical thermal changes and electrical power draw shifts."""
+        eom = ElectroOpticalMechanicalSystem()
+        
+        # Slew the tracking sensor system
+        eom.track_target(15.0, -5.0)
+        
+        # Verify multidisciplinary dependencies triggered successfully
+        self.assertTrue(eom.target_locked)
+        self.assertEqual(eom.current_draw_amps, 12.5)       # Electrical parameter change
+        self.assertTrue(eom.motor_temperature_c > 25.0)     # Mechanical parameter change
+        self.assertEqual(eom.check_system_health(), "PASSED: Electro-Optical Mechanical payload operational")
+
+
 if __name__ == "__main__":
     unittest.main()
