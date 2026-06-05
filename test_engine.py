@@ -33,7 +33,23 @@ class TestDigitalEngineeringFramework(unittest.TestCase):
         # 3.0 MW heat flux should push calculated surface temp past the 1200K ablation limit
         self.assertTrue(self.tps.value_properties["surface_temp_k"] > 1200.0)
         self.assertTrue(self.tps.value_properties["ablation_mass_loss_kg"] > 0.0)
+from multidisciplinary_system import SystemInterfaceBus, StructuralBlock, ElectricalBlock, MechanicalBlock, SoftwareBlock
 
+class TestMultidisciplinaryCascades(unittest.TestCase):
+    def test_cross_domain_propagation(self):
+        """Verifies that software adjustments trigger cascading changes in mechanical and electrical nodes."""
+        bus = SystemInterfaceBus()
+        structural = StructuralBlock(bus)
+        electrical = ElectricalBlock(bus)
+        mechanical = MechanicalBlock(bus)
+        software = SoftwareBlock(bus)
+
+        # Trigger software event
+        software.update_parameter("commanded_tvc_gimbal_deg", 6.0, broadcast=True)
+
+        # Assertions prove physical parameters updated across disconnected classes seamlessly
+        self.assertTrue(mechanical.attributes["hydraulic_pressure_psi"] < 3000.0)
+        self.assertTrue(electrical.attributes["current_draw_amps"] > 15.0)
 
 if __name__ == "__main__":
     unittest.main()
