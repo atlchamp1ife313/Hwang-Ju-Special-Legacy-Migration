@@ -81,7 +81,35 @@ class TestElectroOpticalMechanicalSystem(unittest.TestCase):
         self.assertEqual(eom.current_draw_amps, 12.5)       # Electrical parameter change
         self.assertTrue(eom.motor_temperature_c > 25.0)     # Mechanical parameter change
         self.assertEqual(eom.check_system_health(), "PASSED: Electro-Optical Mechanical payload operational")
+from security_gateway import SecurityGateway
+from comms_link import CommsLinkTracker
+from silo_pneumatics import SiloPneumaticsController
 
+class TestExpandedSentinelSubsystems(unittest.TestCase):
+    def test_cybersecurity_handshake_gating(self):
+        gateway = SecurityGateway()
+        # Should fail initially
+        self.assertIn("REJECTED", gateway.authorize_command("LAUNCH"))
+        # Should pass with valid token
+        self.assertTrue(gateway.execute_handshake("SENTINEL_ALPHA_2026_SECURE"))
+        self.assertIn("EXECUTED", gateway.authorize_command("LAUNCH"))
+
+    def test_rf_comms_attenuation_and_blackout(self):
+        comms = CommsLinkTracker()
+        # Normal high alt flight
+        self.assertIn("NOMINAL", comms.evaluate_link_stability(60000, 4.0))
+        # Hypersonic plasma blackout criteria
+        self.assertIn("CRITICAL FAULT", comms.evaluate_link_stability(120000, 15.0))
+        self.assertTrue(comms.plasma_blackout_active)
+
+    def test_silo_pneumatics_boundaries(self):
+        pneumatics = SiloPneumaticsController()
+        # Baseline launch ready check
+        self.assertTrue(pneumatics.verify_launch_readiness())
+        # Venting system should trigger a launch hold condition
+        pneumatics.adjust_pressure("VENT_SAFETY")
+        self.assertFalse(pneumatics.verify_launch_readiness())
+        self.assertEqual(pneumatics.facility_status, "HOLD_REQUIRED")
 
 if __name__ == "__main__":
     unittest.main()
