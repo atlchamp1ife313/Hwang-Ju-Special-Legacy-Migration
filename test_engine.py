@@ -2,20 +2,20 @@ import unittest
 import math
 import random
 
-# Core Engine Imports
+# Core Sentinel Engine Subsystems
 try:
     from engine import ReentryVehicle, GuidanceSystem, TPSBlock, StateMachine, Signal
 except ImportError:
     ReentryVehicle = GuidanceSystem = TPSBlock = StateMachine = Signal = None
 
-# Safe Imports for All Other Repository Files
+# Signal Processor Module
 try:
     from signal_processor import MovingAverageFilter
 except ImportError:
     MovingAverageFilter = None
 
 
-class TestCompleteSimulationSuite(unittest.TestCase):
+class TestSentinelSimulationSuite(unittest.TestCase):
 
     def test_1_aerothermal_ablation_simulation(self):
         """1. AEROTHERMAL MODEL: Simulates surface temperature scaling and ablation."""
@@ -23,7 +23,7 @@ class TestCompleteSimulationSuite(unittest.TestCase):
         tps_thickness_mm = 50.0
         ablation_triggered = False
         
-        # Simulate 10 seconds of severe atmospheric re-entry heating
+        # Simulate 10 seconds of atmospheric entry thermal loading
         for t in range(10):
             heat_flux_mw = 0.5 * (t ** 2) 
             radiative_cooling = 1e-11 * (surface_temp_k ** 4)
@@ -40,7 +40,7 @@ class TestCompleteSimulationSuite(unittest.TestCase):
             self.assertTrue(tps_thickness_mm < 50.0)
 
     def test_2_state_space_trajectory_simulation(self):
-        """2. TRAJECTORY MODEL: Simulates 1D kinematic flight path state changes."""
+        """2. TRAJECTORY MODEL: Simulates kinematic descent phase transitions."""
         altitude_m = 120000.0  
         velocity_ms = 7500.0   
         dt = 1.0               
@@ -61,11 +61,11 @@ class TestCompleteSimulationSuite(unittest.TestCase):
                 state_log.append("ENTRY_PHASE")
                 
         self.assertTrue(altitude_m < 120000.0)
-        # FIXED: Changed from invalid self.In to proper assertIn
+        # FIXED: Corrected invalid method invocation to valid assertIn structure
         self.assertIn("ENTRY_PHASE", state_log)
 
     def test_3_signal_noise_filter_simulation(self):
-        """3. SIGNAL MODEL: Generates raw noise and verifies digital smoothing performance."""
+        """3. SIGNAL MODEL: Generates telemetry noise to check digital filtering logic."""
         true_signal = [300.0 + (2.0 * i) for i in range(30)]
         noisy_signal = [val + random.uniform(-5.0, 5.0) for val in true_signal]
         
