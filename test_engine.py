@@ -25,76 +25,57 @@ class TestCompleteSimulationSuite(unittest.TestCase):
         
         # Simulate 10 seconds of severe atmospheric re-entry heating
         for t in range(10):
-            # Simulated heat flux scaling quadratically as velocity peaks
             heat_flux_mw = 0.5 * (t ** 2) 
-            
-            # Radiative cooling calculation (Stefan-Boltzmann simplification: Q_rad proportional to T^4)
             radiative_cooling = 1e-11 * (surface_temp_k ** 4)
             
-            # Net energy absorption step
             temperature_delta = (heat_flux_mw * 150.0) - radiative_cooling
             surface_temp_k += max(0.0, temperature_delta)
             
-            # Ablation threshold logic: Material begins burning away at 1800 K
             if surface_temp_k > 1800.0:
                 ablation_triggered = True
-                tps_thickness_mm -= 2.5  # Material loss rate
+                tps_thickness_mm -= 2.5
                 
-        # Engineering checks: Temperature rose, thickness degraded safely within bounds
         self.assertTrue(surface_temp_k > 300.0)
         if ablation_triggered:
             self.assertTrue(tps_thickness_mm < 50.0)
 
     def test_2_state_space_trajectory_simulation(self):
         """2. TRAJECTORY MODEL: Simulates 1D kinematic flight path state changes."""
-        altitude_m = 120000.0  # Start at 120 km (Exoatmospheric boundary)
-        velocity_ms = 7500.0   # 7.5 km/s orbital reentry velocity
-        dt = 1.0               # 1-second time step
-        g = 9.81               # Gravity constant
+        altitude_m = 120000.0  
+        velocity_ms = 7500.0   
+        dt = 1.0               
+        g = 9.81               
         
         state_log = []
         
-        # Run a 20-second trajectory descent loop
         for step in range(20):
-            # Atmospheric density profile approximation: rho = rho_0 * e^(-altitude / scale_height)
             air_density = 1.225 * math.exp(-altitude_m / 8500.0)
-            
-            # Drag force equation step: F_drag = 0.5 * rho * v^2 * Cd * A (normalized per unit mass)
             drag_acceleration = 0.5 * air_density * (velocity_ms ** 2) * 0.1 
             
-            # Update kinematics
-            net_acceleration = g - drag_acceleration
-            velocity_ms += net_acceleration * dt
+            velocity_ms += (g - drag_acceleration) * dt
             altitude_m -= velocity_ms * dt
             
-            # Track operational thresholds
             if altitude_m > 100000.0:
                 state_log.append("EXOATMOSPHERIC_COAST")
             else:
                 state_log.append("ENTRY_PHASE")
                 
-        # Engineering checks: Descent occurred, flight transitioned states
         self.assertTrue(altitude_m < 120000.0)
-        self.In("ENTRY_PHASE", state_log)
+        # FIXED: Changed from invalid self.In to proper assertIn
+        self.assertIn("ENTRY_PHASE", state_log)
 
     def test_3_signal_noise_filter_simulation(self):
         """3. SIGNAL MODEL: Generates raw noise and verifies digital smoothing performance."""
-        # Baseline true sensor measurement profile (linear temperature ramp)
         true_signal = [300.0 + (2.0 * i) for i in range(30)]
-        
-        # Inject random white noise fluctuations (+/- 5 Kelvin)
         noisy_signal = [val + random.uniform(-5.0, 5.0) for val in true_signal]
         
-        # Calculate raw variance (spread of error)
         raw_errors = [noisy - true for noisy, true in zip(noisy_signal, true_signal)]
         raw_variance = sum(e**2 for e in raw_errors) / len(raw_errors)
         
-        # If the repository's MovingAverageFilter is loaded, pass the stream through it
         if MovingAverageFilter:
             filt = MovingAverageFilter(window_size=5)
             filtered_signal = []
             for sample in noisy_signal:
-                # Assuming standard filter object method structure or fallback
                 if hasattr(filt, 'process'):
                     filtered_signal.append(filt.process(sample))
                 elif hasattr(filt, 'update'):
@@ -102,10 +83,8 @@ class TestCompleteSimulationSuite(unittest.TestCase):
                 else:
                     filtered_signal.append(sample)
                     
-            # Basic validation that mathematical framework ran without throwing runtime exceptions
             self.assertEqual(len(filtered_signal), len(noisy_signal))
         else:
-            # Fallback assertion if file is unlinked to preserve green pipeline execution
             self.assertTrue(raw_variance >= 0.0)
 
 
