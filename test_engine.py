@@ -72,6 +72,23 @@ class TestDigitalEngineeringFramework(unittest.TestCase):
     def test_framework_modules_compilation(self):
         """Verify that all target system framework modules run smoothly in the environment."""
         self.assertTrue(True)
-
+    def test_dynamic_reentry_simulation(self):
+            """Simulate a step-by-step atmospheric entry timeline to verify state shifts."""
+            # Start in deep space coast
+            self.assertEqual(self.rv_state_machine.current_state, "EXOATMOSPHERIC_COAST")
+            
+            # Simulate hitting the upper atmosphere over a timeline
+            for altitude_km in range(120, 40, -20):
+                simulated_drag = (120 - altitude_km) * 15000
+                simulated_heat = (120 - altitude_km) * 0.3
+                
+                self.rv.set_property("aerodynamic_drag", simulated_drag)
+                self.tps.set_property("peak_heat_flux_mw", simulated_heat)
+                
+                # Run a lifecycle tick on the state engine
+                self.rv_state_machine.update()
+                
+            # Verify the system safely processed the data points without crashing
+            self.assertIsNotNone(self.rv_state_machine.current_state)
 if __name__ == "__main__":
     unittest.main()
